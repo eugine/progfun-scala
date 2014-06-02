@@ -29,6 +29,11 @@ object Huffman {
     case Leaf(_, _) => throw new IllegalArgumentException
   }
   
+  def subTrees(tree: CodeTree): (CodeTree, CodeTree) = tree match {
+    case Fork(left, right, _, _) => (left, right)
+    case Leaf(_, _) => throw new IllegalArgumentException
+  }
+  
   def contains(tree: CodeTree, char: Char): Boolean = tree match {
     case Fork(_, _, chars, _) => chars.contains(char)
     case Leaf(ch, _) => ch == char
@@ -85,10 +90,10 @@ object Huffman {
    *   }
    */
   def times(chars: List[Char]): List[(Char, Int)] = {
-    if (chars.isEmpty) Nil
+    if (chars isEmpty) Nil
     else {
       val head = chars.head
-      val tail = chars.filter(char => char != head)
+      val tail = chars.filter(_ != head)
       List((head, chars.size - tail.size)) ::: times(tail)
     }
   }
@@ -101,12 +106,11 @@ object Huffman {
    * of a leaf is the frequency of the character.
    */
   def makeOrderedLeafList(freqs: List[(Char, Int)]): List[Leaf] = {
-    makeOrderedLeafListIter(freqs).sortWith((x, y) => x.weight < y.weight)
-  }
-  
-  def makeOrderedLeafListIter(freqs: List[(Char, Int)]): List[Leaf] = {
-    if (freqs.isEmpty) Nil
-    else List(Leaf(freqs.head._1,freqs.head._2)) ::: makeOrderedLeafListIter(freqs.tail)
+	  def makeOrderedLeafListIter(items: List[(Char, Int)]): List[Leaf] = {
+		  if (items.isEmpty) Nil
+		  else List(Leaf(items.head._1,items.head._2)) ::: makeOrderedLeafListIter(items.tail)
+	  }
+	  makeOrderedLeafListIter(freqs).sortWith(_.weight < _.weight)
   }
 
   /**
@@ -130,7 +134,7 @@ object Huffman {
     if (singleton(trees) || trees.isEmpty) trees
     else {
       val unsorted = makeCodeTree(trees.head, trees.tail.head) +: trees.tail.tail   
-      unsorted.sortWith( (x,y) => weight(x) < weight(y))
+      unsorted.sortWith(weight(_) < weight(_))
     }
   }
 
@@ -165,23 +169,20 @@ object Huffman {
    */
    def createCodeTree(chars: List[Char]): CodeTree = until(singleton, combine)(makeOrderedLeafList(times(chars)))(0)
 
-
-
   // Part 3: Decoding
 
   type Bit = Int
 
   def decode(tree: CodeTree, bits: List[Bit]): List[Char] = {
-    decodeIter(tree, tree, bits)
+    def decodeIter(currentTree: CodeTree, remainingBits: List[Bit]): List[Char] = {
+      val chrs = chars(currentTree)
+      if (chrs.tail.isEmpty) chrs ::: decodeIter(tree, remainingBits)
+      else if (remainingBits.isEmpty) Nil
+      else decodeIter(subTree(currentTree, remainingBits.head == 0), remainingBits.tail)
+    }
+    decodeIter(tree, bits)
   }
   
-  private def decodeIter(rootTree: CodeTree, currentTree: CodeTree, bits: List[Bit]): List[Char] = {
-	  val chrs = chars(currentTree)
-	  if (chrs.tail.isEmpty) chrs ::: decodeIter(rootTree, rootTree, bits)
-	  else
-		  if (bits.isEmpty) Nil
-		  else decodeIter(rootTree, subTree(currentTree, bits.head == 0), bits.tail)
-  }
 
   val frenchCode: CodeTree = Fork(Fork(Fork(Leaf('s',121895),Fork(Leaf('d',56269),Fork(Fork(Fork(Leaf('x',5928),Leaf('j',8351),List('x','j'),14279),Leaf('f',16351),List('x','j','f'),30630),Fork(Fork(Fork(Fork(Leaf('z',2093),Fork(Leaf('k',745),Leaf('w',1747),List('k','w'),2492),List('z','k','w'),4585),Leaf('y',4725),List('z','k','w','y'),9310),Leaf('h',11298),List('z','k','w','y','h'),20608),Leaf('q',20889),List('z','k','w','y','h','q'),41497),List('x','j','f','z','k','w','y','h','q'),72127),List('d','x','j','f','z','k','w','y','h','q'),128396),List('s','d','x','j','f','z','k','w','y','h','q'),250291),Fork(Fork(Leaf('o',82762),Leaf('l',83668),List('o','l'),166430),Fork(Fork(Leaf('m',45521),Leaf('p',46335),List('m','p'),91856),Leaf('u',96785),List('m','p','u'),188641),List('o','l','m','p','u'),355071),List('s','d','x','j','f','z','k','w','y','h','q','o','l','m','p','u'),605362),Fork(Fork(Fork(Leaf('r',100500),Fork(Leaf('c',50003),Fork(Leaf('v',24975),Fork(Leaf('g',13288),Leaf('b',13822),List('g','b'),27110),List('v','g','b'),52085),List('c','v','g','b'),102088),List('r','c','v','g','b'),202588),Fork(Leaf('n',108812),Leaf('t',111103),List('n','t'),219915),List('r','c','v','g','b','n','t'),422503),Fork(Leaf('e',225947),Fork(Leaf('i',115465),Leaf('a',117110),List('i','a'),232575),List('e','i','a'),458522),List('r','c','v','g','b','n','t','e','i','a'),881025),List('s','d','x','j','f','z','k','w','y','h','q','o','l','m','p','u','r','c','v','g','b','n','t','e','i','a'),1486387)
 
@@ -198,22 +199,20 @@ object Huffman {
   val Left: Bit = 0
   val Right: Bit = 1
   
-  def encode(tree: CodeTree)(text: List[Char]): List[Bit] = encodeIter(tree)(tree, text)
-  
-  private def encodeIter(rootTree: CodeTree)(currentTree: CodeTree, text: List[Char]): List[Bit] = {
-    if (text.isEmpty) Nil
-    else
-		if (chars(currentTree).tail.isEmpty) encodeIter(rootTree)(rootTree, text.tail)
-		else {
-			val left = subTree(currentTree, true)
-			val right = subTree(currentTree, false)
-			if (contains(left, text.head)) Left +: encodeIter(rootTree)(left, text)
-			else if (contains(right, text.head)) Right +: encodeIter(rootTree)(right, text)
-			else throw new IllegalArgumentException
-		}
+  def encode(baseTree: CodeTree)(text: List[Char]): List[Bit] = {
+    def encodeIter(currentTree: CodeTree, currentText: List[Char]): List[Bit] = {
+      if (currentText.isEmpty) Nil
+      else if (chars(currentTree).tail.isEmpty) encodeIter(baseTree, currentText.tail)
+      else {
+        val (left, right) = subTrees(currentTree)
+        if (contains(left, currentText.head)) Left +: encodeIter(left, currentText)
+        else if (contains(right, currentText.head)) Right +: encodeIter(right, currentText)
+        else throw new IllegalArgumentException
+      }
+    }
+    encodeIter(baseTree, text)
   }
-
-
+  
   // Part 4b: Encoding using code table
 
   type CodeTable = List[(Char, List[Bit])]
@@ -223,7 +222,7 @@ object Huffman {
    * the code table `table`.
    */
   def codeBits(table: CodeTable)(char: Char): List[Bit] = {
-    table.filter(x => x._1 == char)(0)._2
+    table.filter(_._1 == char)(0)._2
   }
 
   /**
@@ -234,18 +233,18 @@ object Huffman {
    * a valid code tree that can be represented as a code table. Using the code tables of the
    * sub-trees, think of how to build the code table for the entire tree.
    */
-  def convert(tree: CodeTree): CodeTable = convertAcc(tree, Nil)
-  
-  def convertAcc(tree: CodeTree, acc: List[Bit]): CodeTable = {
-	  val chrs = chars(tree)
-	  if (chrs.tail.isEmpty) List((chrs.head, acc))
-	  else
-		  mergeCodeTables(
-		      convertAcc(subTree(tree, true), acc :+ Left), 
-		      convertAcc(subTree(tree, false), acc :+ Right))
+  def convert(tree: CodeTree): CodeTable = {
+    def convertAcc(currentTree: CodeTree, acc: List[Bit]): CodeTable = {
+      val chrs = chars(currentTree)
+      if (chrs.tail.isEmpty) List((chrs.head, acc))
+      else {
+        val (leftTree, rightTree) = subTrees(currentTree)
+        mergeCodeTables(convertAcc(leftTree, acc :+ Left), convertAcc(rightTree, acc :+ Right))
+      }
+    }
+    convertAcc(tree, Nil)
   }
   
-
   /**
    * This function takes two code tables and merges them into one. Depending on how you
    * use it in the `convert` method above, this merge method might also do some transformations
@@ -259,10 +258,12 @@ object Huffman {
    * To speed up the encoding process, it first converts the code tree to a code table
    * and then uses it to perform the actual encoding.
    */
-  def quickEncode(tree: CodeTree)(text: List[Char]): List[Bit] = quickEncodeIter(tree)(text, convert(tree))
-  
-  private def quickEncodeIter(tree: CodeTree)(text: List[Char],table: CodeTable): List[Bit] = {
-    if (text.isEmpty) Nil
-    else codeBits(table)(text.head) ::: quickEncodeIter(tree)(text.tail, table)
+  def quickEncode(tree: CodeTree)(text: List[Char]): List[Bit] = {
+    def quickEncodeIter(text: List[Char], table: CodeTable): List[Bit] = {
+      if (text.isEmpty) Nil
+      else codeBits(table)(text.head) ::: quickEncodeIter(text.tail, table)
+    }
+    quickEncodeIter(text, convert(tree))
   }
+  
 }
