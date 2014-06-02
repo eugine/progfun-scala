@@ -6,4 +6,5 @@ Tasks finished:
 2 - funsets (Higher Order Functions)
 3 - objsets (Data and Abstraction)
 4 - patman (Types and Pattern Matching)
+5 - forcomp (Anagrams)
 
