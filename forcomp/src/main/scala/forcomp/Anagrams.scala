@@ -89,7 +89,30 @@ object Anagrams {
    *  Note that the order of the occurrence list subsets does not matter -- the subsets
    *  in the example above could have been displayed in some other order.
    */
-  def combinations(occurrences: Occurrences): List[Occurrences] = ???
+  def combinations(occurrences: Occurrences): List[Occurrences] = {
+    def combinationsForOccurence(occurence: (Char, Int)): List[Occurrences] = 
+      occurence match {
+        case (ch, count) => Nil :: (for (i <- 1 to count) yield List((ch, i))).toList 
+      }
+
+    def combineLists(first: List[Occurrences], second: List[Occurrences]): List[Occurrences] =
+      (first, second) match {
+        case (x :: xs, y :: ys) =>
+          first flatMap (list1 =>
+            second map (list2 =>
+              list2 match {
+                case Nil => list1
+                case _ => list1 ::: list2 
+              }))
+        case _ => if (first.isEmpty) second else first
+      }
+
+    occurrences match {
+      case Nil => List(Nil)
+      case x :: xs => combineLists(combinationsForOccurence(x), combinations(xs))
+    }
+  }                                               //> combinations: (occurrences: forcomp.Anagrams.Occurrences)List[forcomp.Anagra
+
 
   /** Subtracts occurrence list `y` from occurrence list `x`.
    * 
@@ -101,7 +124,21 @@ object Anagrams {
    *  Note: the resulting value is an occurrence - meaning it is sorted
    *  and has no zero-entries.
    */
-  def subtract(x: Occurrences, y: Occurrences): Occurrences = ???
+  def subtract(x: Occurrences, y: Occurrences): Occurrences = {
+    x match {
+      case head :: tail => {
+        y.filter(_._1 == head._1) match {
+          case h :: t => {
+            val count = head._2 - h._2
+            if (count > 0) (head._1, count) :: subtract(tail, y)
+            else subtract(tail, y)
+          }
+          case _ => head :: subtract(tail, y)
+        }
+      }
+      case _ => Nil
+    }
+  }
 
   /** Returns a list of all anagram sentences of the given sentence.
    *  
@@ -143,6 +180,11 @@ object Anagrams {
    *
    *  Note: There is only one anagram of an empty sentence.
    */
-  def sentenceAnagrams(sentence: Sentence): List[Sentence] = ???
+  def sentenceAnagrams(sentence: Sentence): List[Sentence] = {
+    sentence match {
+      case Nil => List(Nil)
+      case _ => Nil
+    }
+  }
 
 }
