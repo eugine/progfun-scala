@@ -64,4 +64,11 @@ class BloxorzSuite extends FunSuite {
       assert(solution.length == optsolution.length)
     }
   }
+  
+  test("String parser terrian") {
+    new Level1 {
+      val ll = Vector(Vector('S', 'T'), Vector('o', 'o'), Vector('o', 'o'))
+      assert(terrainFunction(ll)(Pos(2,1)))
+    }
+  }
 }
