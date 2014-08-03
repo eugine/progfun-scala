@@ -67,6 +67,12 @@ class BloxorzSuite extends FunSuite {
     }
   }
 
+  test("start position") {
+    new Level1 {
+      assert(Block(Pos(1,1), Pos(1,1)) === startBlock)
+    }
+  }
+
   test("legal neighbors function") {
     new Level1 {
       assert(Block(Pos(1,0), Pos(1,0)).legalNeighbors === List((Block(Pos(1,1), Pos(1,2)), Right)))
@@ -81,6 +87,27 @@ class BloxorzSuite extends FunSuite {
   test("done function") {
     new Level1 {
       assert(done(Block(Pos(4, 7), Pos(4, 7))))
+    }
+  }
+  
+  test("neighbors with history") {
+    new Level1 {
+      val expected = Set((Block(Pos(1,2),Pos(1,3)), List(Right,Left,Up)), (Block(Pos(2,1),Pos(3,1)), List(Down,Left,Up)))
+      assert(neighborsWithHistory(Block(Pos(1,1),Pos(1,1)), List(Left,Up)) === expected.toStream)
+    }
+  }
+  
+  test("new neighbors only") {
+    new Level1 {
+      val extected = Set((Block(Pos(2,1),Pos(3,1)), List(Down,Left,Up))).toStream
+      val result = newNeighborsOnly(
+		  Set(
+		    (Block(Pos(1,2),Pos(1,3)), List(Right,Left,Up)),
+		    (Block(Pos(2,1),Pos(3,1)), List(Down,Left,Up))
+		  ).toStream,
+		  Set(Block(Pos(1,2),Pos(1,3)), Block(Pos(1,1),Pos(1,1))))
+		  
+      assert(result === extected)
     }
   }
 
